@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="fa">
+
+<head>
+    <meta charset="UTF-8">
+    <title>نمایش محصولات موبایل</title>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            direction: rtl;
+            background: #eef2f7;
+            padding: 30px;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #0b3d91;
+            font-size: 2.5em;
+        }
+
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            font-size: 2em;
+            color: #0b3d91;
+            font-weight: bold;
+            display: none;
+        }
+
+        .controls {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto 25px auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls input[type="file"],
+        .controls input[type="number"],
+        .controls input[type="text"] {
+            padding: 10px 15px;
+            border: 2px solid #0b3d91;
+            border-radius: 12px;
+            width: 180px;
+            transition: 0.3s;
+        }
+
+        .controls input:focus {
+            outline: none;
+            border-color: #0056b3;
+            box-shadow: 0 0 8px rgba(0, 86, 179, 0.3);
+        }
+
+        .controls button {
+            padding: 10px 25px;
+            background: #0b3d91;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: 0.3s;
+        }
+
+        .controls button:hover {
+            background: #062663;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            padding: 15px 20px;
+            text-align: right;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+        }
+
+        th {
+            background: #0b3d91;
+            color: white;
+            font-size: 1.1em;
+        }
+
+        tr:hover {
+            background: #f0f8ff;
+            transition: 0.2s;
+        }
+
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        th.ascending::after {
+            content: " ▲";
+        }
+
+        th.descending::after {
+            content: " ▼";
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="loader" id="loader">در حال بارگذاری...</div>
+
+    <h1>نمایش محصولات موبایل</h1>
+
+    <div class="controls">
+        <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" />
+        <input type="text" id="searchInput" placeholder="جستجوی محصول..." />
+        <input type="number" id="minPrice" placeholder="کمترین قیمت" />
+        <input type="number" id="maxPrice" placeholder="بیشترین قیمت" />
+        <button id="filterBtn">اعمال فیلتر</button>
+    </div>
+
+    <table id="productTable">
+        <thead>
+            <tr id="headerRow"></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script>
+        const loader = document.getElementById('loader');
+        const tbody = document.querySelector("#productTable tbody");
+        const headerRow = document.getElementById('headerRow');
+        let allData = [];
+        let columns = [];
+
+        // --- بارگذاری فایل ---
+        document.getElementById('fileInput').addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            loader.style.display = 'flex';
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const data = e.target.result;
+                const workbook = XLSX.read(data, { type: 'binary' });
+                const wsname = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[wsname];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                tbody.innerHTML = '';
+                allData = [];
+                columns = jsonData[0]; // ستون‌ها
+                headerRow.innerHTML = '';
+                columns.forEach(col => {
+                    const th = document.createElement('th');
+                    th.textContent = col;
+                    th.dataset.column = col;
+                    headerRow.appendChild(th);
+                });
+                for (let i = 1; i < jsonData.length; i++) {
+                    allData.push(jsonData[i]);
+                    addRow(jsonData[i]);
+                }
+                loader.style.display = 'none';
+            };
+            reader.readAsBinaryString(file);
+        });
+
+        // --- افزودن ردیف ---
+        function addRow(row) {
+            const tr = document.createElement('tr');
+            columns.forEach((col, i) => {
+                const td = document.createElement('td');
+                td.textContent = row[i] || '';
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        }
+
+        // --- تبدیل قیمت به عدد ---
+        function parsePrice(str) {
+            if (!str) return 0;
+            return parseInt(str.replace(/[^\d]/g, '')) || 0;
+        }
+
+        // --- فیلتر و جستجو ---
+        function applyFilter() {
+            const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+            const minVal = parseInt(document.getElementById('minPrice').value) || 0;
+            const maxVal = parseInt(document.getElementById('maxPrice').value) || Infinity;
+
+            tbody.innerHTML = '';
+            allData.forEach(row => {
+                const title = (row[columns.indexOf('عنوان')] || '').toLowerCase();
+                const price = parsePrice(row[columns.indexOf('قیمت ریال')]);
+                const shipping = (row[columns.indexOf('وضعیت ارسال')] || '').toLowerCase();
+                if (price >= minVal && price <= maxVal && (title.includes(keyword) || shipping.includes(keyword))) {
+                    addRow(row);
+                }
+            });
+        }
+
+        // --- مرتب‌سازی و فیلتر پویا ---
+        document.getElementById('filterBtn').addEventListener('click', applyFilter);
+        document.getElementById('searchInput').addEventListener('input', applyFilter);
+        document.getElementById('minPrice').addEventListener('input', applyFilter);
+        document.getElementById('maxPrice').addEventListener('input', applyFilter);
+
+        // --- مرتب‌سازی جدول ---
+        let sortState = {};
+        headerRow.addEventListener('click', function (e) {
+            if (e.target.tagName !== 'TH') return;
+            const col = e.target.dataset.column;
+            const ascending = !sortState[col];
+            sortState[col] = ascending;
+
+            let sortedData = [...allData];
+
+            if (col === 'وضعیت ارسال') {
+                const groups = {};
+                sortedData.forEach(item => {
+                    const key = item[columns.indexOf(col)] || '';
+                    if (!groups[key]) groups[key] = [];
+                    groups[key].push(item);
+                });
+                sortedData = [];
+                Object.keys(groups).forEach(k => sortedData.push(...groups[k]));
+            } else if (col === 'عنوان') {
+                sortedData.reverse();
+            } else if (col === 'قیمت ریال') {
+                sortedData.sort((a, b) => ascending ? parsePrice(a[columns.indexOf(col)]) - parsePrice(b[columns.indexOf(col)]) : parsePrice(b[columns.indexOf(col)]) - parsePrice(a[columns.indexOf(col)]));
+            } else {
+                sortedData.sort((a, b) => {
+                    const valA = a[columns.indexOf(col)] || '';
+                    const valB = b[columns.indexOf(col)] || '';
+                    return ascending ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                });
+            }
+
+            headerRow.querySelectorAll("th").forEach(th => th.classList.remove("ascending", "descending"));
+            e.target.classList.add(ascending ? "ascending" : "descending");
+
+            tbody.innerHTML = '';
+            sortedData.forEach(r => addRow(r));
+        });
+    </script>
+
+</body>
+
+</html>
